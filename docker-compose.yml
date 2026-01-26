@@ -1,0 +1,12 @@
+services:
+  db:
+    image: mysql:8.0
+    container_name: realty-mysql
+    restart: always
+    environment:
+      MYSQL_DATABASE: realty_db
+      MYSQL_ROOT_PASSWORD: qnehdtks1!  # 본인이 사용할 비밀번호로 수정
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./mysql_data:/var/lib/mysql
