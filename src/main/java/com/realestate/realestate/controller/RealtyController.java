@@ -21,4 +21,14 @@ public class RealtyController {
         realtyApiService.fetchAndSaveData(lawdCd, dealYmd);
         return "데이터 수집 및 저장 완료!";
     }
+
+    // 브라우저 실행 주소: http://localhost:8081/collect/seoul
+    @GetMapping("/collect/seoul")
+    public String collectSeoul() {
+        new Thread(() -> {
+            realtyApiService.collectSeoulData();
+        }).start();
+
+        return "서울시 3년치 데이터 수집을 시작합니다! (약 10~15분 소요) 콘솔 로그를 확인하세요.";
+    }
 }

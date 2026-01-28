@@ -5,7 +5,6 @@ import com.realestate.realestate.repository.ApartmentDealRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.web.util.UriComponentsBuilder;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -23,77 +22,112 @@ public class RealtyApiService {
 
     private final ApartmentDealRepository apartmentDealRepository;
 
-
+    // 1. 공공데이터포털 디코딩 인증키 (본인의 키 확인 필수)
     private final String serviceKey = "+umsD8GnHKfyOt9w/vksdyNtNNKdth3vd1w19zFBN2LjdyaRTbUHWzhDBhLXrshicuNzhMa1Y/E5cUrZmf7b7g==";
 
+    // 2. 서울시 25개 구 코드
+    private static final String[] SEOUL_CODES = {
+            "11110", "11140", "11170", "11200", "11215", "11230", "11260", "11290",
+            "11305", "11320", "11350", "11380", "11410", "11440", "11470", "11500",
+            "11530", "11545", "11560", "11590", "11620", "11650", "11680", "11710", "11740"
+    };
+
+    // [기능 1] 서울시 최근 3년치 데이터 수집 (하루 제한 1000회 안쪽으로 맞춤)
+    public void collectSeoulData() {
+        int startYear = 2022; // 2022년부터
+        int endYear = 2024;   // 2024년까지 (총 3년)
+
+        System.out.println("🚀 서울시 데이터 수집 시작 (2022~2024)");
+        int totalRequests = 0;
+
+        for (String districtCode : SEOUL_CODES) {
+            for (int year = startYear; year <= endYear; year++) {
+                for (int month = 1; month <= 12; month++) {
+                    String dealYmd = String.format("%04d%02d", year, month);
+
+                    try {
+                        System.out.print("⏳ 수집중 [" + districtCode + " / " + dealYmd + "] ... ");
+
+                        // 데이터 수집 실행
+                        fetchAndSaveData(districtCode, dealYmd);
+
+                        // 성공 로그
+                        totalRequests++;
+
+                        // API 차단 방지를 위한 0.5초 대기
+                        Thread.sleep(500);
+
+                    } catch (Exception e) {
+                        System.err.println("❌ 실패: " + e.getMessage());
+                    }
+                }
+            }
+        }
+        System.out.println("🏁 서울시 데이터 수집 완료! 총 요청 횟수: " + totalRequests);
+    }
+
+    // [기능 2] 실제 API 호출 및 저장 (핵심 로직)
     public void fetchAndSaveData(String lawdCd, String dealYmd) {
-        String xmlResponse = null;
         try {
-            // 1. 공공데이터포털 최신 주소
             String baseUrl = "https://apis.data.go.kr/1613000/RTMSDataSvcAptTrade/getRTMSDataSvcAptTrade";
 
-            // 2. [핵심] 서비스 키만 따로 강제로 인코딩합니다. (UTF-8)
-            // 이렇게 하면 '+'는 무조건 '%2B'로 변합니다.
+            // ★ 인증키 수동 인코딩 (401 에러 해결)
             String encodedKey = URLEncoder.encode(serviceKey, "UTF-8");
 
-            // 3. 인코딩된 키를 문자열 더하기로 주소에 넣습니다.
+            // ★ URL 직접 조립 (_type=xml, numOfRows=1000 추가)
             String fullUrl = baseUrl + "?serviceKey=" + encodedKey
                     + "&LAWD_CD=" + lawdCd
                     + "&DEAL_YMD=" + dealYmd
-                    + "&_type=xml";
+                    + "&_type=xml"       // XML 강제
+                    + "&numOfRows=1000"; // 한 번에 최대 1000개
 
-            // 4. 로그 확인 (여기서 %2B가 보여야 합니다)
-            System.out.println("진짜_최종_전송_URL: " + fullUrl);
-
-            // 5. URI 객체로 변환하여 RestTemplate에 전달
             URI uri = new URI(fullUrl);
             RestTemplate restTemplate = new RestTemplate();
-            xmlResponse = restTemplate.getForObject(uri, String.class);
+            String xmlResponse = restTemplate.getForObject(uri, String.class);
 
-            System.out.println("====== 수신된 데이터 내용 ======");
-            System.out.println(xmlResponse);
-            System.out.println("==============================");
-
-            // 2. XML 데이터 파싱 준비
+            // XML 파싱
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
             DocumentBuilder builder = factory.newDocumentBuilder();
             Document doc = builder.parse(new ByteArrayInputStream(xmlResponse.getBytes("UTF-8")));
 
             NodeList itemList = doc.getElementsByTagName("item");
 
+            // 데이터가 없으면 리턴
+            if (itemList.getLength() == 0) {
+                System.out.println("데이터 없음 (0건)");
+                return;
+            }
+
             for (int i = 0; i < itemList.getLength(); i++) {
                 Node node = itemList.item(i);
                 if (node.getNodeType() == Node.ELEMENT_NODE) {
                     Element e = (Element) node;
 
-                    // 3. XML 데이터를 Entity로 변환 (데이터 가공 포함)
-                    // 거래금액에서 쉼표(,)를 제거하고 공백을 없앱니다.
                     String rawAmount = getTagValue("dealAmount", e).replace(",", "").trim();
 
                     ApartmentDeal deal = ApartmentDeal.builder()
                             .apartmentName(getTagValue("aptNm", e).trim())
                             .dealAmount(rawAmount)
-                            .buildYear(safeParseInt(getTagValue("buildYear", e)))   // 안전 변환 적용
-                            .dealYear(safeParseInt(getTagValue("dealYear", e)))     // 안전 변환 적용
-                            .dealMonth(safeParseInt(getTagValue("dealMonth", e)))   // 안전 변환 적용
-                            .dealDay(safeParseInt(getTagValue("dealDay", e)))       // 안전 변환 적용
-                            .areaForExclusiveUse(safeParseDouble(getTagValue("excluArea", e)))
+                            .buildYear(safeParseInt(getTagValue("buildYear", e)))
+                            .dealYear(safeParseInt(getTagValue("dealYear", e)))
+                            .dealMonth(safeParseInt(getTagValue("dealMonth", e)))
+                            .dealDay(safeParseInt(getTagValue("dealDay", e)))
+                            .areaForExclusiveUse(safeParseDouble(getTagValue("excluArea", e))) // ★ 빈 값 에러 해결
                             .lawdCd(lawdCd)
                             .build();
 
-                    // 4. DB에 한 건씩 저장
                     apartmentDealRepository.save(deal);
                 }
             }
-            System.out.println("✅ " + dealYmd + " 데이터 저장 완료! (총 " + itemList.getLength() + "건)");
+            System.out.println("✅ 저장 완료 (" + itemList.getLength() + "건)");
 
         } catch (Exception e) {
-            System.err.println("데이터 처리 중 오류 발생: " + e.getMessage());
-            e.printStackTrace();
+            System.out.println("⚠️ 에러 발생: " + e.getMessage());
+            // 여기서 throw를 안 해야 반복문이 멈추지 않고 다음 구역으로 넘어갑니다.
         }
     }
 
-    // [수정됨] XML 태그 값을 안전하게 가져오는 메서드
+    // [헬퍼] 태그 값 꺼내기
     private String getTagValue(String tag, Element e) {
         NodeList nlList = e.getElementsByTagName(tag);
         if (nlList.getLength() > 0 && nlList.item(0).getChildNodes().getLength() > 0) {
@@ -103,26 +137,15 @@ public class RealtyApiService {
         return "";
     }
 
+    // [헬퍼] 안전한 정수 변환
     private Integer safeParseInt(String str) {
-        if (str == null || str.trim().isEmpty()) {
-            return 0;
-        }
-        try {
-            return Integer.parseInt(str.trim());
-        } catch (NumberFormatException e) {
-            return 0;
-        }
+        if (str == null || str.trim().isEmpty()) return 0;
+        try { return Integer.parseInt(str.trim()); } catch (Exception e) { return 0; }
     }
 
-    // [신규] 빈 문자열("")이 들어오면 0.0을 반환하는 안전한 Double 변환기
+    // [헬퍼] 안전한 실수 변환
     private Double safeParseDouble(String str) {
-        if (str == null || str.trim().isEmpty()) {
-            return 0.0;
-        }
-        try {
-            return Double.parseDouble(str.trim());
-        } catch (NumberFormatException e) {
-            return 0.0;
-        }
+        if (str == null || str.trim().isEmpty()) return 0.0;
+        try { return Double.parseDouble(str.trim()); } catch (Exception e) { return 0.0; }
     }
 }
