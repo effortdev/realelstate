@@ -28,7 +28,7 @@ public class RealtyController {
             @RequestParam String lawdCd,
             @RequestParam String dealYmd) {
 
-        realtyApiService.fetchAndSaveData(lawdCd, dealYmd);
+        realtyApiService.fetchApartmentTradeData(lawdCd, dealYmd);
         return "데이터 수집 및 저장 완료!";
     }
 
@@ -71,6 +71,23 @@ public class RealtyController {
         Map<String, Object> response = new HashMap<>();
         response.put("data", result);
         response.put("executionTime", (endTime - startTime) + "ms");
+        return response;
+    }
+
+    @GetMapping("/api/sync")
+    public Map<String, Object> syncLatest(@RequestParam String lawdCd) {
+        long startTime = System.currentTimeMillis();
+
+        // 서비스 호출 -> 이번 달 데이터 긁어오기
+        int addedCount = realtyApiService.syncLatestData(lawdCd);
+
+        long endTime = System.currentTimeMillis();
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("message", "최신 동기화 완료");
+        response.put("addedCount", addedCount); // 몇 개가 새로 추가됐는지 알려줌
+        response.put("time", (endTime - startTime) + "ms");
+
         return response;
     }
 }

@@ -8,6 +8,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface ApartmentDealRepository extends JpaRepository<ApartmentDeal, Long> {
@@ -34,4 +35,17 @@ public interface ApartmentDealRepository extends JpaRepository<ApartmentDeal, Lo
     @Query("SELECT DISTINCT d.apartmentName FROM ApartmentDeal d " +
             "WHERE d.lawdCd = :lawdCd AND d.apartmentName LIKE %:keyword%")
     List<String> findApartmentNames(@Param("lawdCd") String lawdCd, @Param("keyword") String keyword);
+
+    // 4. [프론트 카드용] 특정 아파트의 가장 최신 거래 1건 조회
+    // (년 -> 월 -> 일 내림차순 정렬해서 맨 위 1개 가져옴)
+    Optional<ApartmentDeal> findTop1ByLawdCdAndApartmentNameOrderByDealYearDescDealMonthDescDealDayDesc(String lawdCd, String apartmentName);
+
+    // 5. [동기화용] 특정 지역 데이터 중 "가장 마지막으로 저장된 데이터" 날짜 조회
+    // (스마트 동기화 시작점을 찾기 위함)
+    Optional<ApartmentDeal> findTop1ByLawdCdOrderByDealYearDescDealMonthDesc(String lawdCd);
+
+    // 6. [중복 방지용] 이미 DB에 존재하는 거래인지 확인
+    boolean existsByLawdCdAndApartmentNameAndDealYearAndDealMonthAndDealDayAndDealAmountAndFloor(
+            String lawdCd, String apartmentName, Integer dealYear, Integer dealMonth, Integer dealDay, String dealAmount, Integer floor
+    );
 }
