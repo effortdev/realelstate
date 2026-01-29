@@ -43,26 +43,34 @@ public class RealtyController {
     }
 
 
-    // [신규] 월별 시세 추이 조회 API
-    // 사용법: http://localhost:8081/api/trend?lawdCd=11110
-    @GetMapping("/api/trend")
-    public Map<String, Object> getTrend(@RequestParam String lawdCd) {
+    // 1. 아파트 목록 검색 API (예: /api/apartments?lawdCd=11110&keyword=종로)
+    @GetMapping("/api/apartments")
+    public List<String> searchApartments(@RequestParam String lawdCd, @RequestParam String keyword) {
+        return apartmentDealRepository.findApartmentNames(lawdCd, keyword);
+    }
 
-        // 1. 시간 측정 시작
+    // 2. 시세 추이 API (수정: aptName이 있으면 그걸로, 없으면 구 전체 평균)
+    @GetMapping("/api/trend")
+    public Map<String, Object> getTrend(
+            @RequestParam String lawdCd,
+            @RequestParam(required = false) String aptName // 아파트 이름은 없을 수도 있음 (Optional)
+    ) {
         long startTime = System.currentTimeMillis();
 
-        // 2. DB에서 데이터 가져오기 (통계 쿼리)
-        List<PriceTrendDto> result = apartmentDealRepository.findMonthlyTrend(lawdCd);
+        List<PriceTrendDto> result;
+        if (aptName != null && !aptName.isEmpty()) {
+            // 아파트 이름이 있으면 -> 그 아파트만 조회
+            result = apartmentDealRepository.findMonthlyTrendByApt(lawdCd, aptName);
+        } else {
+            // 없으면 -> 구 전체 평균 조회
+            result = apartmentDealRepository.findMonthlyTrend(lawdCd);
+        }
 
-        // 3. 시간 측정 종료
         long endTime = System.currentTimeMillis();
-        long duration = endTime - startTime;
 
-        // 4. 결과 포장 (데이터 + 걸린시간)
         Map<String, Object> response = new HashMap<>();
         response.put("data", result);
-        response.put("executionTime", duration + "ms"); // 프론트에 '00ms' 라고 시간도 같이 줌
-
+        response.put("executionTime", (endTime - startTime) + "ms");
         return response;
     }
 }
