@@ -4,6 +4,7 @@ import com.realestate.realestate.domain.ApartmentDeal;
 import com.realestate.realestate.repository.ApartmentDealRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.w3c.dom.Document;
@@ -16,6 +17,7 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import java.io.ByteArrayInputStream;
 import java.net.URI;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -27,10 +29,10 @@ public class RealtyApiService {
 
     private final ApartmentDealRepository apartmentDealRepository;
 
-    // 1. 공공데이터포털 디코딩 인증키
+    // 공공데이터포털 인증키 (Encoding 된 키를 넣어야 함)
     private final String serviceKey = "+umsD8GnHKfyOt9w/vksdyNtNNKdth3vd1w19zFBN2LjdyaRTbUHWzhDBhLXrshicuNzhMa1Y/E5cUrZmf7b7g==";
 
-    // 2. 서울시 25개 구 코드
+    // 서울시 25개 구 코드
     private static final String[] SEOUL_CODES = {
             "11110", "11140", "11170", "11200", "11215", "11230", "11260", "11290",
             "11305", "11320", "11350", "11380", "11410", "11440", "11470", "11500",
@@ -41,9 +43,7 @@ public class RealtyApiService {
     public void collectSeoulData() {
         int startYear = 2022;
         int endYear = 2024;
-
         System.out.println("🚀 서울시 데이터 수집 시작 (2022~2024)");
-        int totalRequests = 0;
 
         for (String districtCode : SEOUL_CODES) {
             for (int year = startYear; year <= endYear; year++) {
@@ -51,16 +51,17 @@ public class RealtyApiService {
                     String dealYmd = String.format("%04d%02d", year, month);
                     try {
                         System.out.print("⏳ 수집중 [" + districtCode + " / " + dealYmd + "] ... ");
-
-                        // API 호출하여 리스트 받아오기
                         List<ApartmentDeal> deals = fetchApartmentTradeData(districtCode, dealYmd);
 
-                        // 대량 수집이므로 묻지 않고 저장 (초기화 용도)
-                        apartmentDealRepository.saveAll(deals);
+                        if (!deals.isEmpty()) {
+                            apartmentDealRepository.saveAll(deals);
+                            System.out.println("✅ " + deals.size() + "건 저장");
+                        } else {
+                            System.out.println("⚠️ 데이터 없음");
+                        }
 
-                        System.out.println("✅ " + deals.size() + "건 저장");
-                        totalRequests++;
-                        Thread.sleep(500); // 차단 방지
+                        // ★ 중요: API 차단 방지 (0.5초 대기)
+                        Thread.sleep(500);
 
                     } catch (Exception e) {
                         System.err.println("❌ 실패: " + e.getMessage());
@@ -68,13 +69,13 @@ public class RealtyApiService {
                 }
             }
         }
-        System.out.println("🏁 서울시 데이터 수집 완료! 총 요청 횟수: " + totalRequests);
+        System.out.println("🏁 서울시 데이터 수집 완료!");
     }
 
-    // [기능 2] 스마트 최신 동기화 (마지막 저장된 날짜 이후부터 ~ 오늘까지 채우기)
+    // [기능 2] 스마트 최신 동기화 (collectSeoulData 로직을 그대로 사용하되 범위만 자동 조절)
     @Transactional
-    public int syncLatestData(String lawdCd) {
-        int totalAddedCount = 0;
+    public List<String> syncLatestData(String lawdCd) {
+        List<String> addedAptNames = new ArrayList<>();
 
         // 1. DB에서 가장 마지막 데이터 날짜 확인
         Optional<ApartmentDeal> lastDeal = apartmentDealRepository.findTop1ByLawdCdOrderByDealYearDescDealMonthDesc(lawdCd);
@@ -83,14 +84,15 @@ public class RealtyApiService {
         if (lastDeal.isPresent()) {
             // 마지막 데이터의 "다음 달"부터 수집 시작
             startDate = LocalDate.of(lastDeal.get().getDealYear(), lastDeal.get().getDealMonth(), 1).plusMonths(1);
-            System.out.println("📡 마지막 데이터: " + startDate.minusMonths(1).getYear() + "." + startDate.minusMonths(1).getMonthValue() + " -> 동기화 시작: " + startDate);
+            System.out.println("📡 [" + lawdCd + "] 마지막 데이터: " + lastDeal.get().getDealYear() + "." + lastDeal.get().getDealMonth());
         } else {
             // 데이터가 아예 없으면 2024년 1월부터 시작
             startDate = LocalDate.of(2024, 1, 1);
-            System.out.println("📡 데이터 없음 -> 2024.01부터 시작");
+            System.out.println("📡 [" + lawdCd + "] 데이터 없음 -> 2024.01부터 시작");
         }
 
         LocalDate today = LocalDate.now();
+        System.out.println("👉 동기화 기간: " + startDate + " ~ " + today);
 
         // 2. 시작일부터 오늘까지 월 단위 반복
         while (!startDate.isAfter(today)) {
@@ -98,37 +100,53 @@ public class RealtyApiService {
             int month = startDate.getMonthValue();
             String dealYmd = String.format("%d%02d", year, month);
 
-            // 3. API 호출
-            List<ApartmentDeal> fetchedItems = fetchApartmentTradeData(lawdCd, dealYmd);
+            try {
+                // 3. API 호출
+                System.out.print("🔄 동기화 요청 중 (" + dealYmd + ")... ");
+                List<ApartmentDeal> fetchedItems = fetchApartmentTradeData(lawdCd, dealYmd);
+                System.out.println("응답 " + fetchedItems.size() + "건");
 
-            // 4. 중복 체크 후 저장
-            for (ApartmentDeal item : fetchedItems) {
-                boolean exists = apartmentDealRepository.existsByLawdCdAndApartmentNameAndDealYearAndDealMonthAndDealDayAndDealAmountAndFloor(
-                        item.getLawdCd(), item.getApartmentName(),
-                        item.getDealYear(), item.getDealMonth(), item.getDealDay(),
-                        item.getDealAmount(), item.getFloor()
-                );
+                // 4. 중복 체크 후 저장
+                for (ApartmentDeal item : fetchedItems) {
+                    boolean exists = apartmentDealRepository.existsByLawdCdAndApartmentNameAndDealYearAndDealMonthAndDealDayAndDealAmountAndFloor(
+                            item.getLawdCd(), item.getApartmentName(),
+                            item.getDealYear(), item.getDealMonth(), item.getDealDay(),
+                            item.getDealAmount(), item.getFloor()
+                    );
 
-                if (!exists) {
-                    apartmentDealRepository.save(item);
-                    totalAddedCount++;
+                    if (!exists) {
+                        apartmentDealRepository.save(item);
+                        // 새로 추가된 아파트 이름 기록
+                        if (!addedAptNames.contains(item.getApartmentName())) {
+                            addedAptNames.add(item.getApartmentName());
+                        }
+                    }
                 }
+
+                // ★ 중요: 너무 빠르게 요청하면 차단당함 (0.5초 휴식)
+                Thread.sleep(500);
+
+            } catch (Exception e) {
+                System.err.println("❌ 동기화 중 에러 (" + dealYmd + "): " + e.getMessage());
             }
 
             // 다음 달로 이동
             startDate = startDate.plusMonths(1);
         }
 
-        System.out.println("✨ 동기화 완료! 총 추가된 건수: " + totalAddedCount);
-        return totalAddedCount;
+        System.out.println("✨ 동기화 완료! 총 추가된 아파트 종류: " + addedAptNames.size() + "종");
+        return addedAptNames;
     }
 
-    // [핵심 로직] 실제 공공데이터 API 호출 및 파싱 (리스트 반환)
+    // [핵심 로직] 실제 공공데이터 API 호출 및 파싱 (인코딩 문제 해결 버전)
     public List<ApartmentDeal> fetchApartmentTradeData(String lawdCd, String dealYmd) {
         List<ApartmentDeal> list = new ArrayList<>();
 
         try {
             String baseUrl = "https://apis.data.go.kr/1613000/RTMSDataSvcAptTrade/getRTMSDataSvcAptTrade";
+
+            // ★ 중요: 서비스키 인코딩 이슈 해결
+            // 만약 API 에러(SERVICE_KEY_IS_NOT_REGISTERED)가 나면 아래 URLEncoder 부분을 지우고 그냥 serviceKey를 넣으세요.
             String encodedKey = URLEncoder.encode(serviceKey, "UTF-8");
 
             String fullUrl = baseUrl + "?serviceKey=" + encodedKey
@@ -138,13 +156,18 @@ public class RealtyApiService {
                     + "&numOfRows=1000";
 
             URI uri = new URI(fullUrl);
+
+            // ★ 중요: RestTemplate에 UTF-8 강제 설정 (한글 깨짐 방지)
             RestTemplate restTemplate = new RestTemplate();
+            restTemplate.getMessageConverters().add(0, new StringHttpMessageConverter(StandardCharsets.UTF_8));
+
             String xmlResponse = restTemplate.getForObject(uri, String.class);
 
             // XML 파싱
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
             DocumentBuilder builder = factory.newDocumentBuilder();
-            Document doc = builder.parse(new ByteArrayInputStream(xmlResponse.getBytes("UTF-8")));
+            // UTF-8로 바이트 변환 후 파싱
+            Document doc = builder.parse(new ByteArrayInputStream(xmlResponse.getBytes(StandardCharsets.UTF_8)));
 
             NodeList itemList = doc.getElementsByTagName("item");
 
@@ -153,22 +176,24 @@ public class RealtyApiService {
                 if (node.getNodeType() == Node.ELEMENT_NODE) {
                     Element e = (Element) node;
 
-                    // ★ 중요: 공공데이터 실제 태그명은 한글입니다 (영어x)
-                    String rawAmount = getTagValue("거래금액", e).replace(",", "").trim();
+                    // 1. 거래금액 콤마 제거
+                    String rawAmount = getTagValue("dealAmount", e).replace(",", "").trim();
 
-                    // 층 정보가 없는 경우(저층 등) 방어 로직
-                    String floorStr = getTagValue("층", e);
+// 2. 층 정보 처리 (값이 없으면 0층으로)
+                    String floorStr = getTagValue("floor", e);
                     int floor = floorStr.isEmpty() ? 0 : safeParseInt(floorStr);
 
+// 3. 빌더 생성 (영어 태그 -> 엔티티 필드 매핑)
                     ApartmentDeal deal = ApartmentDeal.builder()
-                            .apartmentName(getTagValue("아파트", e).trim())
-                            .dealAmount(rawAmount)
-                            .dealYear(safeParseInt(getTagValue("년", e)))
-                            .dealMonth(safeParseInt(getTagValue("월", e)))
-                            .dealDay(safeParseInt(getTagValue("일", e)))
-                            .excluUseAr(safeParseDouble(getTagValue("전용면적", e))) // Entity 필드명 확인 필요
-                            .lawdCd(lawdCd)
-                            .dong(getTagValue("법정동", e).trim())
+                            .apartmentName(getTagValue("aptNm", e).trim())   // <aptNm> -> apartmentName
+                            .dealAmount(rawAmount)                           // <dealAmount> -> dealAmount
+                            .dealYear(safeParseInt(getTagValue("dealYear", e)))
+                            .dealMonth(safeParseInt(getTagValue("dealMonth", e)))
+                            .dealDay(safeParseInt(getTagValue("dealDay", e)))
+                            .excluUseAr(safeParseDouble(getTagValue("excluUseAr", e)))
+                            .lawdCd(getTagValue("sggCd", e).trim())          // <sggCd> -> lawdCd (또는 파라미터 lawdCd 사용 가능)
+                            .dong(getTagValue("umdNm", e).trim())            // <umdNm> -> dong (법정동)
+                            .buildYear(safeParseInt(getTagValue("buildYear", e))) // 건축년도 추가
                             .floor(floor)
                             .build();
 
@@ -178,27 +203,24 @@ public class RealtyApiService {
         } catch (Exception e) {
             System.err.println("API 호출 에러 (" + dealYmd + "): " + e.getMessage());
         }
-
         return list;
     }
 
-    // [헬퍼] XML 태그 값 꺼내기
+    // [헬퍼] 태그 값 꺼내기 (Null Safe)
     private String getTagValue(String tag, Element e) {
         NodeList nlList = e.getElementsByTagName(tag);
         if (nlList.getLength() > 0 && nlList.item(0).getChildNodes().getLength() > 0) {
             Node nValue = nlList.item(0).getChildNodes().item(0);
-            return (nValue != null) ? nValue.getNodeValue() : "";
+            return (nValue != null) ? nValue.getNodeValue().trim() : "";
         }
         return "";
     }
 
-    // [헬퍼] 안전한 정수 변환
     private Integer safeParseInt(String str) {
         if (str == null || str.trim().isEmpty()) return 0;
         try { return Integer.parseInt(str.trim()); } catch (Exception e) { return 0; }
     }
 
-    // [헬퍼] 안전한 실수 변환
     private Double safeParseDouble(String str) {
         if (str == null || str.trim().isEmpty()) return 0.0;
         try { return Double.parseDouble(str.trim()); } catch (Exception e) { return 0.0; }

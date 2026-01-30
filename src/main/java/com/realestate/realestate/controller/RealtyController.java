@@ -76,18 +76,11 @@ public class RealtyController {
 
     @GetMapping("/api/sync")
     public Map<String, Object> syncLatest(@RequestParam String lawdCd) {
-        long startTime = System.currentTimeMillis();
-
-        // 서비스 호출 -> 이번 달 데이터 긁어오기
-        int addedCount = realtyApiService.syncLatestData(lawdCd);
-
-        long endTime = System.currentTimeMillis();
+        List<String> addedApts = realtyApiService.syncLatestData(lawdCd);
 
         Map<String, Object> response = new HashMap<>();
-        response.put("message", "최신 동기화 완료");
-        response.put("addedCount", addedCount); // 몇 개가 새로 추가됐는지 알려줌
-        response.put("time", (endTime - startTime) + "ms");
-
+        response.put("addedCount", addedApts.size());
+        response.put("addedApts", addedApts); // [신규] 아파트 이름 리스트 추가
         return response;
     }
 }
