@@ -1,5 +1,6 @@
 package com.realestate.realestate.controller;
 
+import com.realestate.realestate.domain.ApartmentDeal;
 import com.realestate.realestate.dto.PriceTrendDto;
 import com.realestate.realestate.repository.ApartmentDealRepository;
 import com.realestate.realestate.service.RealtyApiService;
@@ -7,12 +8,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
 import org.springframework.web.bind.annotation.CrossOrigin;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequiredArgsConstructor
@@ -22,47 +23,55 @@ public class RealtyController {
     private final RealtyApiService realtyApiService;
     private final ApartmentDealRepository apartmentDealRepository;
 
-    // 브라우저 주소창에 http://localhost:8081/fetch?lawdCd=11110&dealYmd=202401 입력 시 실행
+    // ... (fetch, collectSeoul, searchApartments 메서드는 기존과 동일) ...
     @GetMapping("/fetch")
-    public String fetchData(
-            @RequestParam String lawdCd,
-            @RequestParam String dealYmd) {
-
+    public String fetchData(@RequestParam String lawdCd, @RequestParam String dealYmd) {
         realtyApiService.fetchApartmentTradeData(lawdCd, dealYmd);
         return "데이터 수집 및 저장 완료!";
     }
 
-    // 브라우저 실행 주소: http://localhost:8081/collect/seoul
     @GetMapping("/collect/seoul")
     public String collectSeoul() {
-        new Thread(() -> {
-            realtyApiService.collectSeoulData();
-        }).start();
-
-        return "서울시 3년치 데이터 수집을 시작합니다! (약 10~15분 소요) 콘솔 로그를 확인하세요.";
+        new Thread(() -> realtyApiService.collectSeoulData()).start();
+        return "서울시 3년치 데이터 수집 시작 (콘솔 확인)";
     }
 
-
-    // 1. 아파트 목록 검색 API (예: /api/apartments?lawdCd=11110&keyword=종로)
     @GetMapping("/api/apartments")
     public List<String> searchApartments(@RequestParam String lawdCd, @RequestParam String keyword) {
         return apartmentDealRepository.findApartmentNames(lawdCd, keyword);
     }
 
-    // 2. 시세 추이 API (수정: aptName이 있으면 그걸로, 없으면 구 전체 평균)
+    // ▼▼▼ 여기가 수정된 부분입니다! ▼▼▼
     @GetMapping("/api/trend")
     public Map<String, Object> getTrend(
             @RequestParam String lawdCd,
-            @RequestParam(required = false) String aptName // 아파트 이름은 없을 수도 있음 (Optional)
+            @RequestParam(required = false) String aptName
     ) {
         long startTime = System.currentTimeMillis();
 
         List<PriceTrendDto> result;
+        Map<String, Object> latestDeal = null; // 초기화 위치 변경 및 변수명 명확화
+
         if (aptName != null && !aptName.isEmpty()) {
-            // 아파트 이름이 있으면 -> 그 아파트만 조회
+            // 1. 그래프 데이터 조회
             result = apartmentDealRepository.findMonthlyTrendByApt(lawdCd, aptName);
+
+            // 2. [수정됨] 최신 거래 정보 조회 (지도 및 상단 정보용)
+            Optional<ApartmentDeal> dealOpt = apartmentDealRepository.findTop1ByLawdCdAndApartmentNameOrderByDealYearDescDealMonthDescDealDayDesc(lawdCd, aptName);
+
+            if (dealOpt.isPresent()) {
+                ApartmentDeal deal = dealOpt.get();
+                latestDeal = new HashMap<>();
+                latestDeal.put("date", deal.getDealYear() + "." + deal.getDealMonth() + "." + deal.getDealDay());
+                latestDeal.put("price", deal.getDealAmount());
+                latestDeal.put("floor", deal.getFloor());
+                latestDeal.put("area", deal.getExcluUseAr());
+
+                // ★ [핵심] 이 줄이 추가되어야 지도가 '동' 단위로 검색합니다!
+                latestDeal.put("dong", deal.getDong());
+            }
         } else {
-            // 없으면 -> 구 전체 평균 조회
+            // 구 전체 평균
             result = apartmentDealRepository.findMonthlyTrend(lawdCd);
         }
 
@@ -70,17 +79,18 @@ public class RealtyController {
 
         Map<String, Object> response = new HashMap<>();
         response.put("data", result);
+        response.put("latest", latestDeal); // 프론트엔드로 최신 정보 전송
         response.put("executionTime", (endTime - startTime) + "ms");
         return response;
     }
+    // ▲▲▲ 여기까지 수정 ▲▲▲
 
     @GetMapping("/api/sync")
     public Map<String, Object> syncLatest(@RequestParam String lawdCd) {
         List<String> addedApts = realtyApiService.syncLatestData(lawdCd);
-
         Map<String, Object> response = new HashMap<>();
         response.put("addedCount", addedApts.size());
-        response.put("addedApts", addedApts); // [신규] 아파트 이름 리스트 추가
+        response.put("addedApts", addedApts);
         return response;
     }
 }
