@@ -69,18 +69,39 @@ public class OpenApiClient {
                 String floorStr = getTagValue("floor", e);
                 int floor = floorStr.isEmpty() ? 0 : parseSafeInt(floorStr);
 
-                // 영어 태그 (aptNm 등) 사용
+                // ★ 모든 필드 매핑 (빌더 패턴 활용)
                 ApartmentDeal deal = ApartmentDeal.builder()
+                        // 1. 기본 정보
                         .apartmentName(getTagValue("aptNm", e).trim())
                         .dealAmount(rawAmount)
                         .dealYear(parseSafeInt(getTagValue("dealYear", e)))
                         .dealMonth(parseSafeInt(getTagValue("dealMonth", e)))
                         .dealDay(parseSafeInt(getTagValue("dealDay", e)))
                         .excluUseAr(parseSafeDouble(getTagValue("excluUseAr", e)))
-                        .lawdCd(lawdCd) // 요청했던 구 코드 사용
-                        .dong(getTagValue("umdNm", e).trim())
+                        .lawdCd(lawdCd)
                         .floor(floor)
+
+                        // 2. 핵심 주소 정보
+                        .dong(getTagValue("umdNm", e).trim()) // 법정동 (필수!)
+                        .jibun(getTagValue("jibun", e).trim()) // 지번 (지도 정확도 UP)
+
+                        // 3. 상세 정보 (추가됨)
+                        .buildYear(parseSafeInt(getTagValue("buildYear", e))) // 건축년도
+                        .aptDong(getTagValue("aptDong", e)) // 아파트 동 정보
+
+                        // 4. 거래 특이사항
+                        .dealingGbn(getTagValue("dealingGbn", e)) // 직거래/중개거래
+                        .estateAgentSggNm(getTagValue("estateAgentSggNm", e)) // 중개사 위치
+                        .cdealType(getTagValue("cdealType", e)) // 취소 여부
+                        .cdealDay(getTagValue("cdealDay", e)) // 취소 날짜
+                        .rgstDate(getTagValue("rgstDate", e)) // 등기 날짜
+
+                        // 5. 기타 구분
+                        .slerGbn(getTagValue("slerGbn", e))
+                        .buyerGbn(getTagValue("buyerGbn", e))
+                        .landLeaseholdGbn(getTagValue("landLeaseholdGbn", e))
                         .build();
+
                 list.add(deal);
             }
         }

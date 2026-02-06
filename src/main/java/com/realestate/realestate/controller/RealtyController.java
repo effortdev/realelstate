@@ -93,4 +93,10 @@ public class RealtyController {
         response.put("addedApts", addedApts);
         return response;
     }
+
+    @GetMapping("/reset")
+    public String resetData() {
+        apartmentDealRepository.deleteAll(); // 모든 데이터 삭제
+        return "🗑️ DB가 깨끗하게 비워졌습니다! /collect/seoul 을 눌러 다시 수집해주세요.";
+    }
 }

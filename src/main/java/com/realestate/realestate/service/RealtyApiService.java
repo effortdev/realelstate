@@ -27,8 +27,8 @@ public class RealtyApiService {
 
     // 2. 서울시 전체 데이터 수집 메서드 (누락된 부분)
     public void collectSeoulData() {
-        int startYear = 2022;
-        int endYear = 2024;
+        int startYear = 2023;
+        int endYear = 2025;
         System.out.println("🚀 서울시 데이터 수집 시작 (2022~2024)");
 
         for (String districtCode : SEOUL_CODES) {
