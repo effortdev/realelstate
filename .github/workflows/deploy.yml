@@ -32,8 +32,8 @@ jobs:
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.AZURE_HOST }}
-          username: ${{ secrets.AZURE_USER }}
-          password: ${{ secrets.AZURE_PASSWORD }}
+          username: azureuser  # 직접 적거나 secrets.AZURE_USER 사용
+          key: ${{ secrets.AZURE_SSH_KEY }} # 패스워드 대신 이 줄을 넣으세요!
           script: |
             cd ~/realestate
             # 1. 기존 컨테이너 중지 및 삭제 (안전한 재시작을 위해)
