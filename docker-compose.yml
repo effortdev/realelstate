@@ -24,7 +24,7 @@ services:
     container_name: realestate-app
     restart: always
     ports:
-      - "8080:8080"
+      - "8080:8081"
     depends_on:
       - db
     environment:
