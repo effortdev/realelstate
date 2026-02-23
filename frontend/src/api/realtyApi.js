@@ -8,7 +8,9 @@ export const DISTRICT_MAP = {
   "관악구": "11620", "서초구": "11650", "강남구": "11680", "송파구": "11710", "강동구": "11740"
 };
 
-const BASE_URL = 'http://localhost:8081/api';
+// const BASE_URL = 'http://localhost:8081/api';
+// const BASE_URL = 'http://70.153.24.129:8080/api';
+const BASE_URL = '/api';
 
 // 1. 시세 추이 및 최신 정보 조회
 export const getTrendData = async (lawdCd, aptName) => {
