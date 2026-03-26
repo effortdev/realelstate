@@ -2,7 +2,7 @@
 
 > 공공데이터 API 기반 전국 아파트 실거래가 수집 · 분석 · 시각화 플랫폼
 
-[![Live Demo](https://img.shields.io/badge/🌐_Live_Demo-realelstate.vercel.app-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://realelstate.vercel.app/)
+[![플랫폼 방문](https://img.shields.io/badge/🌐_Live_Demo-realelstate.vercel.app-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://realelstate.vercel.app/)
 
 <br>
 
