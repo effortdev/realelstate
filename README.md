@@ -1,115 +1,136 @@
-🏠 RealEstate Data Visualization Project
-이 프로젝트는 공공데이터 API를 활용하여 약 100만 건의 전국 아파트 실거래가 데이터를 수집하고, 이를 네이버 지도와 연동하여 시각화하는 부동산 데이터 분석 플랫폼입니다.
+# 🏠 RealEstate Data Visualization Platform
 
-1. 프로젝트 개요
-- 목적: 대용량 부동산 데이터를 효율적으로 처리하고 사용자에게 직관적인 시각화 정보 제공
+> 공공데이터 API 기반 전국 아파트 실거래가 수집 · 분석 · 시각화 플랫폼
 
-- 주요 기능:
+<br>
 
-공공데이터포털 아파트 실거래가 API 연동 및 자동 수집
+## 📌 프로젝트 개요
 
-네이버 지도 API를 활용한 매물 위치 표시 및 클러스터링
+공공데이터포털의 아파트 실거래가 API를 활용하여 **약 100만 건**의 전국 부동산 거래 데이터를 수집하고,  
+네이버 지도와 연동하여 사용자에게 직관적인 부동산 시각화 정보를 제공하는 데이터 분석 플랫폼입니다.
 
-지역별/기간별 아파트 거래 트렌드 분석 차트 
+<br>
 
-2. Tech Stack
-- Frontend: React, Vercel
+## ✨ 주요 기능
 
-- Backend: Spring Boot, Spring Data JPA
+| 기능 | 설명 |
+|------|------|
+| 📡 데이터 수집 | 공공데이터포털 아파트 실거래가 API 자동 수집 |
+| 🗺️ 지도 시각화 | 네이버 지도 API 활용 매물 위치 표시 및 클러스터링 |
+| 📊 트렌드 분석 | 지역별 / 기간별 아파트 거래 트렌드 차트 제공 |
 
-- Database: MySQL 8.0 (Docker)
+<br>
 
-- Infra: Azure (VM), Docker, Docker Compose
+## 🛠️ Tech Stack
 
-- CI/CD: GitHub Actions, Docker Hub
+### Frontend
+![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
+![Vercel](https://img.shields.io/badge/Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)
 
-트러블슈팅 및 해결 (핵심 역량)
+### Backend
+![Spring Boot](https://img.shields.io/badge/Spring_Boot-6DB33F?style=for-the-badge&logo=spring-boot&logoColor=white)
+![Spring Data JPA](https://img.shields.io/badge/Spring_Data_JPA-6DB33F?style=for-the-badge&logo=spring&logoColor=white)
 
-🚀 인프라 및 배포 최적화
-문제: Azure 1GB RAM의 낮은 사양으로 인해 스프링 부트 빌드 및 실행 중 서버 멈춤 현상 발생
+### Database & Infra
+![MySQL](https://img.shields.io/badge/MySQL_8.0-4479A1?style=for-the-badge&logo=mysql&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
+![Azure](https://img.shields.io/badge/Azure_VM-0078D4?style=for-the-badge&logo=microsoft-azure&logoColor=white)
 
-해결:
+### CI/CD
+![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?style=for-the-badge&logo=github-actions&logoColor=white)
+![Docker Hub](https://img.shields.io/badge/Docker_Hub-2496ED?style=for-the-badge&logo=docker&logoColor=white)
 
-- Linux Swap 메모리(2GB) 설정을 통해 가상 메모리 확보, 저사양 환경에서의 안정적인 구동 환경 구축
+<br>
 
-- Docker Compose를 도입하여 DB와 App의 독립된 환경 구축 및 인프라 명세 코드화
+## 🔄 CI/CD 파이프라인
 
-- 성과: 서버 중단 없이 안정적인 배포 환경 구축
+```
+Code Push → GitHub Actions Build → Docker Image 생성 → Docker Hub 업로드 → Azure 서버 자동 배포
+```
 
-🔒 Mixed Content 및 CORS 이슈 해결
-문제: HTTPS(Vercel) 프론트엔드에서 HTTP(Azure) 백엔드 API 호출 시 브라우저 보안 정책으로 인한 통신 차단 발생
+- 로컬 개발 환경과 상용 배포 환경의 설정을 **완전 분리**하여 개발 생산성 극대화
 
-해결:
+<br>
 
-- vercel.json의 Rewrites(Proxy) 기능을 활용하여 프론트엔드와 동일 도메인 경로로 API 요청을 중계하도록 설정
+## 🔥 트러블슈팅 & 문제 해결
 
-- 백엔드에 CORS 설정을 적용하여 허용된 오리진(Vercel)만 접근 가능하도록 보안 강화
+> 실제 개발 과정에서 겪은 핵심 문제와 해결 방법을 기록합니다.
 
-⚡ 대용량 데이터 처리 및 성능 최적화 (100만 건 규모)
-문제:
+---
 
-데이터 수집 시 중복 체크용 SELECT 쿼리가 누적될수록 속도가 저하되는 현상
+### 🚀 인프라 & 배포 최적화
 
-수집 중 무거운 집계(AVG, GROUP BY) 쿼리 동시 발생 시 CPU 부하 급증
+**문제**
+- Azure 1GB RAM 저사양 환경에서 Spring Boot 빌드 및 실행 중 **서버 멈춤 현상** 발생
 
-해결:
+**해결**
+- Linux **Swap 메모리(2GB)** 설정으로 가상 메모리를 확보하여 안정적인 구동 환경 구축
+- **Docker Compose** 도입으로 DB와 App을 독립된 컨테이너로 분리, 인프라 명세 코드화
 
-- DB Index 최적화: lawd_cd, apartment_name 등 주요 조회 조건에 인덱스를 생성하여 조회 성능 100배 이상 향상
+**성과** ✅ 서버 중단 없는 안정적인 배포 환경 구축
 
-- Port Mapping 전략: 내부 로직과 외부 노출 포트의 엄격한 분리(8080:8081)로 보안성 및 네트워크 구조 명확화
+---
 
-- Batch processing: 대용량 데이터를 처리하기 위해 메모리 사용량을 모니터링하며 수집 로직 최적화 중
+### 🔒 Mixed Content & CORS 이슈
 
-4. 자동화 파이프라인 (CI/CD)
-   GitHub Actions를 활용하여 코드 Push 시 빌드 → Docker Image 생성 → Docker Hub 업로드 → Azure 서버 자동 배포 단계를 자동화함
+**문제**
+- HTTPS(Vercel) 프론트엔드 → HTTP(Azure) 백엔드 API 호출 시 **브라우저 보안 정책으로 통신 차단**
 
-로컬 개발 환경과 상용 배포 환경의 설정을 분리하여 개발 생산성 증대
+**해결**
+- `vercel.json`의 **Rewrites(Proxy)** 기능을 활용하여 동일 도메인 경로로 API 요청 중계
+- 백엔드에 **CORS 설정** 적용 → 허용된 오리진(Vercel)만 접근 가능하도록 보안 강화
 
+---
 
+### ⚡ 대용량 데이터 처리 성능 최적화 (100만 건 규모)
 
+**문제**
+- 중복 체크용 SELECT 쿼리가 누적될수록 **수집 속도 급격히 저하**
+- 집계 쿼리(`AVG`, `GROUP BY`) 동시 실행 시 **CPU 부하 급증**
 
-401 Unauthorized (가장 지독했던 녀석)
-   증상: 브라우저에선 되는데, 코드만 돌리면 "인증 안 됨(Unauthorized)" 에러 발생.
+**해결**
+- **DB Index 최적화** : `lawd_cd`, `apartment_name` 등 주요 조회 조건에 인덱스 생성 → 조회 성능 **100배 이상 향상**
+- **Port Mapping 전략** : 내부 로직 포트와 외부 노출 포트 엄격 분리 (`8080:8081`) → 보안성 및 네트워크 구조 명확화
+- **Batch Processing** : 대용량 데이터 처리를 위한 메모리 사용량 모니터링 및 수집 로직 최적화
 
-원인: '이중 인코딩(Double Encoding)' 문제.
+---
 
-공공데이터 인증키에는 +, /, = 같은 특수문자가 들어있습니다.
+### 🐛 API 연동 디버깅 기록
 
-스프링(RestTemplate)이 "어? 특수문자네? 내가 안전하게 바꿔줄게!"라며 +를 %2B로, 그걸 또 %252B로 두 번 바꿔버려서 서버가 "틀린 키"라고 인식했습니다.
+#### 1️⃣ `401 Unauthorized` — 이중 인코딩(Double Encoding) 문제
 
-해결:
+| 항목 | 내용 |
+|------|------|
+| **증상** | 브라우저에서는 정상 작동하지만, 코드 실행 시 인증 실패 |
+| **원인** | 공공데이터 인증키의 특수문자(`+`, `/`, `=`)를 Spring의 `RestTemplate`이 자동 인코딩하여 **이중 인코딩** 발생 (`+` → `%2B` → `%252B`) |
+| **해결** | Java의 `URLEncoder`로 직접 인코딩 후 `URI` 객체에 담아 전송 → Spring의 자동 인코딩 차단 |
 
-스프링에게 맡기지 않고, 자바의 URLEncoder로 우리가 직접 인코딩했습니다.
+---
 
-그리고 URI 객체에 담아서 보내 "이건 내가 검수 끝낸 주소니까 건드리지 마!"라고 명령했습니다.
+#### 2️⃣ `Cannot GET ...` — API 엔드포인트 변경
 
-2. Cannot GET ...
-   증상: 브라우저나 콘솔에서 경로를 찾을 수 없다는 에러.
+| 항목 | 내용 |
+|------|------|
+| **증상** | 브라우저 / 콘솔에서 경로를 찾을 수 없다는 에러 |
+| **원인** | 국토교통부 서버 이전 (`openapi.molit.go.kr` → `apis.data.go.kr`) |
+| **해결** | 공공데이터포털 공식 문서의 최신 URL로 교체 |
 
-원인: '구버전 주소(Endpoint)' 사용.
+---
 
-블로그나 예전 자료에 있는 openapi.molit.go.kr 주소를 사용했는데, 국토교통부가 최근 apis.data.go.kr로 서버를 이사했습니다.
+#### 3️⃣ `Content is not allowed in prolog` — 응답 형식 불일치
 
-해결: 공공데이터포털 공식 문서에 있는 최신 URL로 교체했습니다.
+| 항목 | 내용 |
+|------|------|
+| **증상** | 401 통과 후 파싱 즉시 에러 발생 |
+| **원인** | XML 파서(`DocumentBuilder`) 사용 중 서버가 **JSON 형식**으로 응답 |
+| **해결** | URL에 `&_type=xml` 파라미터 추가하여 XML 응답 강제 지정 |
 
-3. Content is not allowed in prolog
-   증상: 401은 통과했는데, 파싱(Parsing) 시작하자마자 에러 발생.
+---
 
-원인: '데이터 형식 불일치 (JSON vs XML)'.
+#### 4️⃣ `NumberFormatException: empty String` — Null 데이터 처리 미흡
 
-우리는 자바의 DocumentBuilder(XML 분석기)를 준비했는데, 서버는 요즘 유행하는 JSON 데이터({ "response": ... })를 보내줬습니다.
-
-XML 분석기가 { 괄호를 보고 "이건 XML 형식이 아니야!"라고 뻗어버린 겁니다.
-
-해결: URL 뒤에 **&_type=xml**을 붙여서 "무조건 XML로 줘!"라고 강제했습니다.
-
-4. java.lang.NumberFormatException: empty String
-   증상: 데이터가 잘 들어오다가 갑자기 숫자 변환 에러로 멈춤.
-
-원인: '빈 데이터(Null Data)' 처리 미흡.
-
-모든 아파트가 정보가 꽉 차 있진 않습니다. 어떤 데이터는 전용면적 태그가 비어있었죠 (<excluArea/>).
-
-자바는 빈 문자열 ""을 숫자로 바꾸려 하면 에러를 냅니다.
-
-해결: safeParse 메서드를 만들어서, 값이 비어있으면 에러를 내지 않고 0으로 채워 넣도록 안전장치를 걸었습니다.
+| 항목 | 내용 |
+|------|------|
+| **증상** | 데이터 수집 중 숫자 변환 에러로 프로세스 중단 |
+| **원인** | 일부 아파트 데이터의 전용면적 태그가 비어있어 빈 문자열(`""`)을 숫자로 변환 시도 |
+| **해결** | `safeParse()` 메서드 구현 → 값이 비어있을 경우 예외 없이 `0`으로 대체 처리 |
