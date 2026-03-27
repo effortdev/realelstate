@@ -88,7 +88,6 @@ public class RealtyApiService {
 
 
 
-    // 중복 체크 헬퍼 메소드
     private boolean isDuplicate(ApartmentDeal item) {
         return apartmentDealRepository.existsByLawdCdAndApartmentNameAndDealYearAndDealMonthAndDealDayAndDealAmountAndFloor(
                 item.getLawdCd(), item.getApartmentName(),
@@ -97,9 +96,8 @@ public class RealtyApiService {
         );
     }
 
-    // [추가] 컨트롤러(테스트용 /fetch)를 위한 연결 다리 메서드
     public List<ApartmentDeal> fetchApartmentTradeData(String lawdCd, String dealYmd) {
-        // 서비스가 직접 안 하고, 전문가(Client)에게 시킵니다.
+
         return openApiClient.fetchTradeData(lawdCd, dealYmd);
     }
 }

@@ -16,7 +16,6 @@ public class ApartmentDeal {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // --- [기존 필드] ---
     private String apartmentName;      // 아파트 명 (aptNm)
     private String dealAmount;         // 거래 금액
     private Integer dealYear;          // 거래 년도
@@ -27,7 +26,6 @@ public class ApartmentDeal {
     private String dong;               // 법정동 (umdNm)
     private Double excluUseAr;         // 전용 면적
 
-    // --- [★ 신규 추가 필드 (모두 가져오기)] ---
     private String jibun;              // 지번
     private Integer buildYear;         // 건축년도 (숫자로 변환)
 
