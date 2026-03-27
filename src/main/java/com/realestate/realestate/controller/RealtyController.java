@@ -23,7 +23,6 @@ public class RealtyController {
     private final RealtyApiService realtyApiService;
     private final ApartmentDealRepository apartmentDealRepository;
 
-    // ... (fetch, collectSeoul, searchApartments 메서드는 기존과 동일) ...
     @GetMapping("/fetch")
     public String fetchData(@RequestParam String lawdCd, @RequestParam String dealYmd) {
         realtyApiService.fetchApartmentTradeData(lawdCd, dealYmd);
@@ -41,7 +40,6 @@ public class RealtyController {
         return apartmentDealRepository.findApartmentNames(lawdCd, keyword);
     }
 
-    // ▼▼▼ 여기가 수정된 부분입니다! ▼▼▼
     @GetMapping("/api/trend")
     public Map<String, Object> getTrend(
             @RequestParam String lawdCd,
@@ -50,13 +48,11 @@ public class RealtyController {
         long startTime = System.currentTimeMillis();
 
         List<PriceTrendDto> result;
-        Map<String, Object> latestDeal = null; // 초기화 위치 변경 및 변수명 명확화
+        Map<String, Object> latestDeal = null;
 
         if (aptName != null && !aptName.isEmpty()) {
-            // 1. 그래프 데이터 조회
             result = apartmentDealRepository.findMonthlyTrendByApt(lawdCd, aptName);
 
-            // 2. [수정됨] 최신 거래 정보 조회 (지도 및 상단 정보용)
             Optional<ApartmentDeal> dealOpt = apartmentDealRepository.findTop1ByLawdCdAndApartmentNameOrderByDealYearDescDealMonthDescDealDayDesc(lawdCd, aptName);
 
             if (dealOpt.isPresent()) {
@@ -67,11 +63,9 @@ public class RealtyController {
                 latestDeal.put("floor", deal.getFloor());
                 latestDeal.put("area", deal.getExcluUseAr());
 
-                // ★ [핵심] 이 줄이 추가되어야 지도가 '동' 단위로 검색합니다!
                 latestDeal.put("dong", deal.getDong());
             }
         } else {
-            // 구 전체 평균
             result = apartmentDealRepository.findMonthlyTrend(lawdCd);
         }
 
@@ -79,11 +73,10 @@ public class RealtyController {
 
         Map<String, Object> response = new HashMap<>();
         response.put("data", result);
-        response.put("latest", latestDeal); // 프론트엔드로 최신 정보 전송
+        response.put("latest", latestDeal);
         response.put("executionTime", (endTime - startTime) + "ms");
         return response;
     }
-    // ▲▲▲ 여기까지 수정 ▲▲▲
 
     @GetMapping("/api/sync")
     public Map<String, Object> syncLatest(@RequestParam String lawdCd) {
@@ -96,7 +89,7 @@ public class RealtyController {
 
     @GetMapping("/reset")
     public String resetData() {
-        apartmentDealRepository.deleteAll(); // 모든 데이터 삭제
+        apartmentDealRepository.deleteAll();
         return "🗑️ DB가 깨끗하게 비워졌습니다! /collect/seoul 을 눌러 다시 수집해주세요.";
     }
 }

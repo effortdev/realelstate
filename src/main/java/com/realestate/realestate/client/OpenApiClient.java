@@ -23,7 +23,6 @@ import java.util.List;
 @RequiredArgsConstructor
 public class OpenApiClient {
 
-    // 인증키는 여기서 관리 (나중에는 application.properties로 빼는 게 좋습니다)
     private final String serviceKey = "+umsD8GnHKfyOt9w/vksdyNtNNKdth3vd1w19zFBN2LjdyaRTbUHWzhDBhLXrshicuNzhMa1Y/E5cUrZmf7b7g==";
 
     public List<ApartmentDeal> fetchTradeData(String lawdCd, String dealYmd) {
@@ -43,12 +42,11 @@ public class OpenApiClient {
 
             String xmlResponse = restTemplate.getForObject(new URI(fullUrl), String.class);
 
-            // 파싱 로직 분리
             return parseXml(xmlResponse, lawdCd);
 
         } catch (Exception e) {
             System.err.println("❌ API 호출 실패 (" + dealYmd + "): " + e.getMessage());
-            return list; // 빈 리스트 반환
+            return list;
         }
     }
 
@@ -69,9 +67,7 @@ public class OpenApiClient {
                 String floorStr = getTagValue("floor", e);
                 int floor = floorStr.isEmpty() ? 0 : parseSafeInt(floorStr);
 
-                // ★ 모든 필드 매핑 (빌더 패턴 활용)
                 ApartmentDeal deal = ApartmentDeal.builder()
-                        // 1. 기본 정보
                         .apartmentName(getTagValue("aptNm", e).trim())
                         .dealAmount(rawAmount)
                         .dealYear(parseSafeInt(getTagValue("dealYear", e)))
@@ -81,22 +77,18 @@ public class OpenApiClient {
                         .lawdCd(lawdCd)
                         .floor(floor)
 
-                        // 2. 핵심 주소 정보
-                        .dong(getTagValue("umdNm", e).trim()) // 법정동 (필수!)
-                        .jibun(getTagValue("jibun", e).trim()) // 지번 (지도 정확도 UP)
+                        .dong(getTagValue("umdNm", e).trim())
+                        .jibun(getTagValue("jibun", e).trim())
 
-                        // 3. 상세 정보 (추가됨)
-                        .buildYear(parseSafeInt(getTagValue("buildYear", e))) // 건축년도
-                        .aptDong(getTagValue("aptDong", e)) // 아파트 동 정보
+                        .buildYear(parseSafeInt(getTagValue("buildYear", e)))
+                        .aptDong(getTagValue("aptDong", e))
 
-                        // 4. 거래 특이사항
-                        .dealingGbn(getTagValue("dealingGbn", e)) // 직거래/중개거래
-                        .estateAgentSggNm(getTagValue("estateAgentSggNm", e)) // 중개사 위치
-                        .cdealType(getTagValue("cdealType", e)) // 취소 여부
-                        .cdealDay(getTagValue("cdealDay", e)) // 취소 날짜
-                        .rgstDate(getTagValue("rgstDate", e)) // 등기 날짜
+                        .dealingGbn(getTagValue("dealingGbn", e))
+                        .estateAgentSggNm(getTagValue("estateAgentSggNm", e))
+                        .cdealType(getTagValue("cdealType", e))
+                        .cdealDay(getTagValue("cdealDay", e))
+                        .rgstDate(getTagValue("rgstDate", e))
 
-                        // 5. 기타 구분
                         .slerGbn(getTagValue("slerGbn", e))
                         .buyerGbn(getTagValue("buyerGbn", e))
                         .landLeaseholdGbn(getTagValue("landLeaseholdGbn", e))
