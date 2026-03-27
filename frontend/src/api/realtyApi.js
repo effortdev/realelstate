@@ -12,19 +12,16 @@ export const DISTRICT_MAP = {
 // const BASE_URL = 'http://70.153.24.129:8080/api';
 const BASE_URL = '/api';
 
-// 1. 시세 추이 및 최신 정보 조회
 export const getTrendData = async (lawdCd, aptName) => {
   let url = `${BASE_URL}/trend?lawdCd=${lawdCd}`;
   if (aptName) url += `&aptName=${encodeURIComponent(aptName)}`;
   return await axios.get(url);
 };
 
-// 2. 아파트 검색
 export const searchAptList = async (lawdCd, keyword) => {
   return await axios.get(`${BASE_URL}/apartments?lawdCd=${lawdCd}&keyword=${keyword}`);
 };
 
-// 3. 최신 데이터 동기화
 export const syncData = async (lawdCd) => {
   return await axios.get(`${BASE_URL}/sync?lawdCd=${lawdCd}`);
 };

@@ -21,7 +21,6 @@ const PriceChart = ({ data, loading, district, apt, time }) => {
       </Header>
 
       <ChartArea>
-        {/* 데이터가 있고, 로딩 중이 아닐 때만 차트 렌더링 */}
         {!loading && data && data.length > 0 ? (
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
@@ -54,7 +53,6 @@ const PriceChart = ({ data, loading, district, apt, time }) => {
 
 export default PriceChart;
 
-// --- 스타일 정의 ---
 const ChartCard = styled.div`
   background: white; padding: 24px; border-radius: 16px;
   box-shadow: 0 4px 20px rgba(0,0,0,0.03); margin-bottom: 50px;
@@ -66,7 +64,6 @@ const Badge = styled.span`
   font-size: 12px; font-weight: bold;
 `;
 
-// [수정] 높이(height)를 명확하게 400px로 고정!
 const ChartArea = styled.div`
   width: 100%;
   height: 400px; /* 고정 높이 필수 */

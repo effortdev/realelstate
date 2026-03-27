@@ -5,7 +5,6 @@ import { DISTRICT_MAP } from '../api/realtyApi';
 const SearchSection = ({ state, actions }) => {
   return (
     <Card>
-      {/* 상단 컨트롤 */}
       <TopRow>
         <SelectGroup>
           <Select value={state.selectedDistrict} onChange={actions.handleDistrictChange}>
@@ -16,7 +15,6 @@ const SearchSection = ({ state, actions }) => {
         <SyncButton onClick={actions.handleSync}>📥 최신 데이터 가져오기</SyncButton>
       </TopRow>
 
-      {/* 검색창 */}
       <SearchRow>
         <Input
           value={state.searchKeyword}
@@ -27,7 +25,6 @@ const SearchSection = ({ state, actions }) => {
         <SearchButton onClick={actions.handleSearch}>검색</SearchButton>
       </SearchRow>
 
-      {/* 결과 태그 */}
       {state.aptList.length > 0 && (
         <TagContainer>
           <Label>검색 결과:</Label>
@@ -49,7 +46,6 @@ const SearchSection = ({ state, actions }) => {
 };
 export default SearchSection;
 
-// --- 스타일 ---
 const Card = styled.div`
   background: white;
   padding: 24px;
