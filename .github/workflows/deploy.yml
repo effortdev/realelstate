@@ -36,6 +36,12 @@ jobs:
           key: ${{ secrets.AZURE_SSH_KEY }} # 패스워드 대신 이 줄을 넣으세요!
           script: |
             cd ~/realestate
+            
+            # 1. GitHub Secrets 값을 가져와서 .env 파일 생성
+            echo "DB_ROOT_PASSWORD=${{ secrets.DB_ROOT_PASSWORD }}" > .env
+            echo "DB_USER=${{ secrets.DB_USER }}" >> .env
+            echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
+            
             # 1. 기존 컨테이너 중지 및 삭제 (안전한 재시작을 위해)
             docker-compose down
             # 2. 최신 이미지 가져오기
