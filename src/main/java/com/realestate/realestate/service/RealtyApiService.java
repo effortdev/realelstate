@@ -17,7 +17,7 @@ import java.util.Optional;
 public class RealtyApiService {
 
     private final ApartmentDealRepository apartmentDealRepository;
-    private final OpenApiClient openApiClient; // ★ 전문가(Client) 고용
+    private final OpenApiClient openApiClient;
 
     private static final String[] SEOUL_CODES = {
             "11110", "11140", "11170", "11200", "11215", "11230", "11260", "11290",
@@ -25,7 +25,6 @@ public class RealtyApiService {
             "11530", "11545", "11560", "11590", "11620", "11650", "11680", "11710", "11740"
     };
 
-    // 2. 서울시 전체 데이터 수집 메서드 (누락된 부분)
     public void collectSeoulData() {
         int startYear = 2023;
         int endYear = 2025;
@@ -38,7 +37,6 @@ public class RealtyApiService {
                     try {
                         System.out.print("⏳ 수집중 [" + districtCode + " / " + dealYmd + "] ... ");
 
-                        // OpenApiClient를 통해 데이터 가져오기
                         List<ApartmentDeal> deals = openApiClient.fetchTradeData(districtCode, dealYmd);
 
                         if (!deals.isEmpty()) {
@@ -48,7 +46,7 @@ public class RealtyApiService {
                             System.out.println("⚠️ 데이터 없음");
                         }
 
-                        Thread.sleep(300); // 차단 방지
+                        Thread.sleep(300);
 
                     } catch (Exception e) {
                         System.err.println("❌ 실패: " + e.getMessage());
@@ -63,29 +61,26 @@ public class RealtyApiService {
     public List<String> syncLatestData(String lawdCd) {
         List<String> addedAptNames = new ArrayList<>();
 
-        // 1. 마지막 데이터 날짜 조회
         Optional<ApartmentDeal> lastDeal = apartmentDealRepository.findTop1ByLawdCdOrderByDealYearDescDealMonthDesc(lawdCd);
 
         LocalDate startDate = lastDeal.map(deal -> LocalDate.of(deal.getDealYear(), deal.getDealMonth(), 1).plusMonths(1))
                 .orElse(LocalDate.of(2024, 1, 1));
         LocalDate today = LocalDate.now();
 
-        // 2. 반복문 (비즈니스 로직)
         while (!startDate.isAfter(today)) {
             String dealYmd = String.format("%d%02d", startDate.getYear(), startDate.getMonthValue());
 
-            // ★ 더러운 API 호출 코드는 사라지고, 깔끔하게 호출만 함
             List<ApartmentDeal> fetchedItems = openApiClient.fetchTradeData(lawdCd, dealYmd);
 
             for (ApartmentDeal item : fetchedItems) {
-                if (!isDuplicate(item)) { // 중복 체크 로직 분리
+                if (!isDuplicate(item)) {
                     apartmentDealRepository.save(item);
                     if (!addedAptNames.contains(item.getApartmentName())) {
                         addedAptNames.add(item.getApartmentName());
                     }
                 }
             }
-            try { Thread.sleep(300); } catch (InterruptedException e) {} // 매너 타임
+            try { Thread.sleep(300); } catch (InterruptedException e) {}
             startDate = startDate.plusMonths(1);
         }
         return addedAptNames;

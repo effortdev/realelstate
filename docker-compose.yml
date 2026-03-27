@@ -6,11 +6,8 @@ services:
     restart: always
     environment:
       MYSQL_DATABASE: realty_db
-#      MYSQL_ROOT_PASSWORD: qnehdtks1!
-#      MYSQL_USER: realestate
-#      MYSQL_PASSWORD: qnehdtks1!
-      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}  # 변수로 변경
-      MYSQL_USER: ${DB_USER}                    # 변수로 변경
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_USER: ${DB_USER}
       MYSQL_PASSWORD: ${DB_PASSWORD}
     ports:
       - "3306:3306"
@@ -22,7 +19,6 @@ services:
           memory: 300M
 
   app:
-    # 핵심: build: . 대신 Docker Hub에 올라갈 이미지 이름을 사용합니다.
     image: ktjone/realestate-app
     container_name: realestate-app
     restart: always
@@ -31,11 +27,8 @@ services:
     depends_on:
       - db
     environment:
-      # DB 주소를 'db'로 설정하여 컨테이너 간 통신 가능하게 함
       SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/realty_db?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=Asia/Seoul
-#      SPRING_DATASOURCE_USERNAME: realestate
-#      SPRING_DATASOURCE_PASSWORD: qnehdtks1!
-      SPRING_DATASOURCE_USERNAME: ${DB_USER}     # 변수로 변경
+      SPRING_DATASOURCE_USERNAME: ${DB_USER}
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
     deploy:
       resources:
