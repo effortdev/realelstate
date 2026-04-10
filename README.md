@@ -84,19 +84,6 @@ Code Push → GitHub Actions Build → Docker Image 생성 → Docker Hub 업로
 
 ---
 
-### ⚡ 대용량 데이터 처리 성능 최적화 (100만 건 규모)
-
-**문제**
-- 중복 체크용 SELECT 쿼리가 누적될수록 **수집 속도 급격히 저하**
-- 집계 쿼리(`AVG`, `GROUP BY`) 동시 실행 시 **CPU 부하 급증**
-
-**해결**
-- **DB Index 최적화** : `lawd_cd`, `apartment_name` 등 주요 조회 조건에 인덱스 생성 → 조회 성능 **100배 이상 향상**
-- **Port Mapping 전략** : 내부 로직 포트와 외부 노출 포트 엄격 분리 (`8080:8081`) → 보안성 및 네트워크 구조 명확화
-- **Batch Processing** : 대용량 데이터 처리를 위한 메모리 사용량 모니터링 및 수집 로직 최적화
-
----
-
 ### 🐛 API 연동 디버깅 기록
 
 #### 1️⃣ `401 Unauthorized` — 이중 인코딩(Double Encoding) 문제
